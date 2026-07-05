@@ -4,6 +4,8 @@ build/
 .gradle-home/
 node_modules/
 coverage/
+coverage.json
+.coverage
 htmlcov/
 .pytest_cache/
 __pycache__/

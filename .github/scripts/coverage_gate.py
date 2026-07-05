@@ -55,7 +55,7 @@ TARGETS = {
         "audit",
         "audit-logger",
         Path("services/audit-logger/coverage.json"),
-        "missing",
+        "pytest",
     ),
 }
 
@@ -91,11 +91,25 @@ def jest_branch_percent(path: Path) -> float | None:
     return float(pct) if pct is not None else None
 
 
+def pytest_branch_percent(path: Path) -> float | None:
+    if not path.exists():
+        return None
+    data = json.loads(path.read_text(encoding="utf-8"))
+    totals = data.get("totals", {})
+    num_branches = totals.get("num_branches")
+    covered_branches = totals.get("covered_branches")
+    if not num_branches:
+        return None
+    return (covered_branches / num_branches) * 100
+
+
 def coverage_for(target: CoverageTarget) -> float | None:
     if target.report_type == "jacoco":
         return jacoco_branch_percent(target.report)
     if target.report_type == "jest":
         return jest_branch_percent(target.report)
+    if target.report_type == "pytest":
+        return pytest_branch_percent(target.report)
     return None
 
 
