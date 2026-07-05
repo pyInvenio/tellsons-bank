@@ -59,7 +59,39 @@ def append_step_summary(session: dict) -> None:
 def parse_knowledge_ids(raw: str | None) -> list[str]:
     if not raw:
         return []
-    return [item.strip() for item in raw.split(",") if item.strip()]
+    return [normalize_resource_id(item, "knowledge_") for item in raw.split(",") if item.strip()]
+
+
+def normalize_resource_id(value: str, expected_prefix: str) -> str:
+    trimmed = value.strip().strip("'\"")
+    without_query = trimmed.split("?", 1)[0].split("#", 1)[0]
+    resource_id = next(reversed([part for part in without_query.split("/") if part]), trimmed)
+    if resource_id.startswith(expected_prefix):
+        return resource_id
+    return f"{expected_prefix}{resource_id}"
+
+
+def get_playbook_id() -> str | None:
+    raw = os.environ.get("DEVIN_PLAYBOOK_ID") or os.environ.get(
+        "DEVIN_PLAYBOOK_ID_COMPLIANCE_TESTS"
+    )
+    return normalize_resource_id(raw, "playbook_") if raw else None
+
+
+def get_knowledge_ids() -> list[str]:
+    explicit = parse_knowledge_ids(os.environ.get("DEVIN_KNOWLEDGE_IDS"))
+    if explicit:
+        return explicit
+    keys = [
+        "DEVIN_KNOWLEDGE_ID_TELLSONS_DEMO_CONTEXT",
+        "DEVIN_KNOWLEDGE_ID_TELLSONS_COMPLIANCE_PATHS",
+        "DEVIN_KNOWLEDGE_ID_TELLSONS_DEVIN_API_NOTES",
+    ]
+    return [
+        normalize_resource_id(os.environ[key], "knowledge_")
+        for key in keys
+        if os.environ.get(key)
+    ]
 
 
 def open_session(args: argparse.Namespace) -> dict:
@@ -82,15 +114,19 @@ def open_session(args: argparse.Namespace) -> dict:
         "max_acu_limit": args.max_acu_limit,
         "repos": [args.repo] if args.repo else [],
     }
-    playbook_id = os.environ.get("DEVIN_PLAYBOOK_ID")
+    playbook_id = get_playbook_id()
     if playbook_id:
         payload["playbook_id"] = playbook_id
-    knowledge_ids = parse_knowledge_ids(os.environ.get("DEVIN_KNOWLEDGE_IDS"))
+    knowledge_ids = get_knowledge_ids()
     if knowledge_ids:
         payload["knowledge_ids"] = knowledge_ids
     if args.devin_mode:
         payload["devin_mode"] = args.devin_mode
 
+    return post_session(org_id, api_key, payload)
+
+
+def post_session(org_id: str, api_key: str, payload: dict[str, object]) -> dict:
     request = urllib.request.Request(
         f"{API_BASE}/organizations/{org_id}/sessions",
         data=json.dumps(payload).encode("utf-8"),
@@ -104,8 +140,56 @@ def open_session(args: argparse.Namespace) -> dict:
         with urllib.request.urlopen(request, timeout=30) as response:
             return json.loads(response.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
-        sys.stderr.write(exc.read().decode("utf-8"))
+        body = exc.read().decode("utf-8")
+        if should_retry_without_workspace_assets(exc, body, payload):
+            sys.stderr.write(
+                "Devin rejected the configured playbook/knowledge IDs. "
+                "Retrying as a prompt-only session. Update DEVIN_PLAYBOOK_ID "
+                "and DEVIN_KNOWLEDGE_IDS to re-enable attached workspace assets.\n"
+            )
+            prompt_only_payload = dict(payload)
+            prompt_only_payload.pop("playbook_id", None)
+            prompt_only_payload.pop("knowledge_ids", None)
+            prompt_only_payload["prompt"] = append_local_guidance(
+                str(prompt_only_payload["prompt"])
+            )
+            return post_session(org_id, api_key, prompt_only_payload)
+        sys.stderr.write(body)
         raise
+
+
+def should_retry_without_workspace_assets(
+    exc: urllib.error.HTTPError, body: str, payload: dict[str, object]
+) -> bool:
+    if os.environ.get("DEVIN_STRICT_WORKSPACE_ASSETS", "").lower() in {"1", "true", "yes"}:
+        return False
+    if exc.code != 400:
+        return False
+    if "playbook_id" not in payload and "knowledge_ids" not in payload:
+        return False
+    normalized = body.lower()
+    return "playbook" in normalized or "knowledge" in normalized
+
+
+def append_local_guidance(prompt: str) -> str:
+    skill_paths = [
+        Path(".agents/skills/compliance-tests/SKILL.md"),
+        Path(".agents/skills/coverage-evidence/SKILL.md"),
+        Path(".agents/skills/no-prod-code-test-pr/SKILL.md"),
+    ]
+    sections = [
+        f"## Local Guidance: {path.parent.name}\n\n{path.read_text(encoding='utf-8').strip()}"
+        for path in skill_paths
+        if path.exists()
+    ]
+    if not sections:
+        return prompt
+    return (
+        f"{prompt}\n\n---\n\nLOCAL DEVIN RESOURCES\n"
+        "These committed repo-local resources mirror the Devin workspace playbook "
+        "and knowledge. Treat them as trusted operating guidance for this session.\n\n"
+        + "\n\n".join(sections)
+    )
 
 
 def main() -> int:
