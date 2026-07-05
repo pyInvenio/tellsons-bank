@@ -1,0 +1,10 @@
+{
+  "service": "loan-origination",
+  "language": "typescript",
+  "compliancePath": "auth",
+  "syntheticOnly": true,
+  "coverageTarget": {
+    "metric": "branch",
+    "targetPercent": 65
+  }
+}

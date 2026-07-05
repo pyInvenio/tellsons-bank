@@ -1,0 +1,67 @@
+name: Devin change coverage trigger
+
+on:
+  push:
+    branches:
+      - 'devin-trigger/**'
+      - 'coverage-trigger/**'
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Service to target
+        required: true
+        default: payments-core
+      path:
+        description: Compliance path
+        required: true
+        type: choice
+        options: [transaction, auth, pii, audit]
+        default: transaction
+
+jobs:
+  open-coverage-session:
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'devin:coverage' &&
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve change target
+        if: github.event_name != 'workflow_dispatch'
+        id: change
+        run: python .github/scripts/resolve_devin_change.py --kind coverage
+      - name: Resolve manual target
+        if: github.event_name == 'workflow_dispatch'
+        id: manual
+        run: >
+          python .github/scripts/resolve_devin_change.py
+          --kind coverage
+          --service "${{ inputs.service }}"
+          --path "${{ inputs.path }}"
+      - name: Open Devin coverage session
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_ORG_ID: ${{ secrets.DEVIN_ORG_ID }}
+          DEVIN_PLAYBOOK_ID: ${{ secrets.DEVIN_PLAYBOOK_ID }}
+          DEVIN_KNOWLEDGE_IDS: ${{ secrets.DEVIN_KNOWLEDGE_IDS }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          python .github/scripts/open_devin_session.py
+          --service "${{ steps.change.outputs.service || steps.manual.outputs.service }}"
+          --path "${{ steps.change.outputs.path_family || steps.manual.outputs.path_family }}"
+          --title "${{ steps.change.outputs.title || steps.manual.outputs.title }}"
+          --prompt-file "${{ steps.change.outputs.prompt_file || steps.manual.outputs.prompt_file }}"
+          --tag change-trigger
+          --tag tellsons-occ
+          --tag "${{ steps.change.outputs.path_family || steps.manual.outputs.path_family }}"
+          --comment-on-github

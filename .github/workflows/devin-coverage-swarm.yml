@@ -1,0 +1,47 @@
+name: Devin coverage swarm
+
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: Services to fan out across
+        required: true
+        type: choice
+        options: [core-four, no-infra-python, all-services]
+        default: core-four
+      max_sessions:
+        description: Maximum sessions to launch
+        required: true
+        default: '4'
+      max_acu_limit:
+        description: ACU cap per session
+        required: true
+        default: '10'
+      devin_mode:
+        description: Devin mode
+        required: false
+        type: choice
+        options: [normal, fast, lite, ultra, fusion]
+        default: fusion
+
+jobs:
+  launch-swarm:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Launch bounded Devin coverage swarm
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_ORG_ID: ${{ secrets.DEVIN_ORG_ID }}
+          DEVIN_PLAYBOOK_ID: ${{ secrets.DEVIN_PLAYBOOK_ID }}
+          DEVIN_KNOWLEDGE_IDS: ${{ secrets.DEVIN_KNOWLEDGE_IDS }}
+          DEVIN_REPO: pyInvenio/tellsons-bank
+        run: >
+          python .github/scripts/open_devin_swarm.py
+          --scope "${{ inputs.scope }}"
+          --max-sessions "${{ inputs.max_sessions }}"
+          --max-acu-limit "${{ inputs.max_acu_limit }}"
+          --repo "$DEVIN_REPO"
+          --devin-mode "${{ inputs.devin_mode }}"

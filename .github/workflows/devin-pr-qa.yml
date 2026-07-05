@@ -1,0 +1,68 @@
+name: Devin PR QA
+
+on:
+  pull_request:
+    types: [labeled, ready_for_review]
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Service to target
+        required: false
+        default: audit-logger
+      path:
+        description: Compliance path
+        required: false
+        type: choice
+        options: [transaction, auth, pii, audit]
+        default: audit
+
+jobs:
+  open-qa-session:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.label.name == 'devin:qa' &&
+       github.event.pull_request.head.repo.full_name == github.repository) ||
+      (github.event_name == 'issue_comment' &&
+       github.actor == github.repository_owner &&
+       github.event.issue.pull_request &&
+       contains(github.event.comment.body, '/devin qa'))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Resolve PR QA target
+        if: github.event_name != 'workflow_dispatch'
+        id: qa
+        run: python .github/scripts/resolve_devin_change.py --kind qa
+      - name: Resolve manual QA target
+        if: github.event_name == 'workflow_dispatch'
+        id: manual
+        run: >
+          python .github/scripts/resolve_devin_change.py
+          --kind qa
+          --service "${{ inputs.service }}"
+          --path "${{ inputs.path }}"
+      - name: Open Devin QA session
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_ORG_ID: ${{ secrets.DEVIN_ORG_ID }}
+          DEVIN_PLAYBOOK_ID: ${{ secrets.DEVIN_PLAYBOOK_ID }}
+          DEVIN_KNOWLEDGE_IDS: ${{ secrets.DEVIN_KNOWLEDGE_IDS }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          python .github/scripts/open_devin_session.py
+          --service "${{ steps.qa.outputs.service || steps.manual.outputs.service }}"
+          --path "${{ steps.qa.outputs.path_family || steps.manual.outputs.path_family }}"
+          --title "${{ steps.qa.outputs.title || steps.manual.outputs.title }}"
+          --prompt-file "${{ steps.qa.outputs.prompt_file || steps.manual.outputs.prompt_file }}"
+          --tag qa
+          --tag tellsons-occ
+          --tag "${{ steps.qa.outputs.path_family || steps.manual.outputs.path_family }}"
+          --comment-on-github

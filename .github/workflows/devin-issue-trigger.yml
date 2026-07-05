@@ -1,0 +1,77 @@
+name: Devin issue trigger
+
+on:
+  issues:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      service:
+        description: Service to target
+        required: true
+        default: audit-logger
+      path:
+        description: Compliance path
+        required: true
+        type: choice
+        options: [transaction, auth, pii, audit]
+        default: audit
+
+jobs:
+  open-devin-session:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'devin:test-gap'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve issue target
+        if: github.event_name == 'issues'
+        id: issue
+        run: python .github/scripts/resolve_devin_trigger.py
+      - name: Write manual prompt
+        if: github.event_name == 'workflow_dispatch'
+        id: manual
+        run: |
+          prompt_file="${RUNNER_TEMP}/devin_manual_prompt.txt"
+          cat > "$prompt_file" <<'PROMPT'
+          !compliance-tests ${{ inputs.service }} ${{ inputs.path }}
+
+          Triggered manually from GitHub Actions. Use synthetic fixtures only. Add tests,
+          fixtures, mocks, CI wiring, and evidence notes. Do not change production code.
+          PROMPT
+          echo "prompt_file=$prompt_file" >> "$GITHUB_OUTPUT"
+      - name: Open Devin session from issue label
+        if: github.event_name == 'issues'
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_ORG_ID: ${{ secrets.DEVIN_ORG_ID }}
+          DEVIN_PLAYBOOK_ID: ${{ secrets.DEVIN_PLAYBOOK_ID }}
+          DEVIN_KNOWLEDGE_IDS: ${{ secrets.DEVIN_KNOWLEDGE_IDS }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          python .github/scripts/open_devin_session.py
+          --service "${{ steps.issue.outputs.service }}"
+          --path "${{ steps.issue.outputs.path_family }}"
+          --title "${{ steps.issue.outputs.title }}"
+          --prompt-file "${{ steps.issue.outputs.prompt_file }}"
+          --tag issue-trigger
+          --tag tellsons-occ
+          --tag "${{ steps.issue.outputs.path_family }}"
+          --comment-on-github
+      - name: Open Devin session manually
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_ORG_ID: ${{ secrets.DEVIN_ORG_ID }}
+          DEVIN_PLAYBOOK_ID: ${{ secrets.DEVIN_PLAYBOOK_ID }}
+          DEVIN_KNOWLEDGE_IDS: ${{ secrets.DEVIN_KNOWLEDGE_IDS }}
+        run: >
+          python .github/scripts/open_devin_session.py
+          --service "${{ inputs.service }}"
+          --path "${{ inputs.path }}"
+          --title "Manual trigger: ${{ inputs.path }} coverage for ${{ inputs.service }}"
+          --prompt-file "${{ steps.manual.outputs.prompt_file }}"
+          --tag manual-trigger
+          --tag tellsons-occ
+          --tag "${{ inputs.path }}"

@@ -1,0 +1,54 @@
+name: Compliance coverage ratchet
+
+on:
+  pull_request:
+  schedule:
+    - cron: '30 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  coverage-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate Java coverage reports
+        continue-on-error: true
+        run: gradle :services:payments-core:test :services:pii-vault:test
+      - name: Generate auth coverage report
+        continue-on-error: true
+        working-directory: services/auth-gateway
+        run: |
+          npm install
+          npm test
+      - name: Check compliance-path coverage
+        id: gate
+        continue-on-error: true
+        run: python .github/scripts/coverage_gate.py --paths transaction,auth,pii,audit --min 80
+      - name: Open Devin session on gap
+        if: steps.gate.outputs.below_threshold == 'true'
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_ORG_ID: ${{ secrets.DEVIN_ORG_ID }}
+          DEVIN_PLAYBOOK_ID: ${{ secrets.DEVIN_PLAYBOOK_ID }}
+          DEVIN_KNOWLEDGE_IDS: ${{ secrets.DEVIN_KNOWLEDGE_IDS }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          python .github/scripts/open_devin_session.py
+          --service "${{ steps.gate.outputs.service }}"
+          --path "${{ steps.gate.outputs.path_family }}"
+          --title "Ratchet ${{ steps.gate.outputs.path_family }} coverage for ${{ steps.gate.outputs.service }}"
+          --tag ratchet
+          --tag tellsons-occ
+          --comment-on-pr

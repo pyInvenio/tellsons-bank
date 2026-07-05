@@ -1,0 +1,12 @@
+[
+  {
+    "accountId": "acct_test_source",
+    "currency": "USD",
+    "balance": "100.00"
+  },
+  {
+    "accountId": "acct_test_dest",
+    "currency": "USD",
+    "balance": "5.00"
+  }
+]

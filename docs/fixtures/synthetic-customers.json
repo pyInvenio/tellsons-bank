@@ -1,0 +1,12 @@
+[
+  {
+    "customerId": "cust_test_001",
+    "name": "Test User",
+    "ssn": "000-00-0000"
+  },
+  {
+    "customerId": "cust_test_002",
+    "name": "Unicode Example",
+    "ssn": "123-45-0000"
+  }
+]

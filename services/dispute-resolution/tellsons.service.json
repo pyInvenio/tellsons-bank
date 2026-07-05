@@ -1,0 +1,10 @@
+{
+  "service": "dispute-resolution",
+  "language": "python",
+  "compliancePath": "audit",
+  "syntheticOnly": true,
+  "coverageTarget": {
+    "metric": "branch",
+    "targetPercent": 60
+  }
+}

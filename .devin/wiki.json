@@ -1,0 +1,53 @@
+{
+  "repo_notes": [
+    {
+      "content": "Tellson's Bank is a synthetic 12-service banking monorepo. Documentation should emphasize the four compliance-critical path families: transaction processing, authentication, PII handling, and audit logging. The repo intentionally has uneven test maturity, including audit-logger with no pytest, coverage configuration, mocks, or CI job.",
+      "author": "Tellson's platform team"
+    },
+    {
+      "content": "Prioritize docs/compliance/critical-paths.md, docs/architecture/service-catalog.md, docs/architecture/compliance-data-flow.md, docs/compliance/coverage-baseline.md, AGENTS.md, .agents/skills, and GitHub workflows for coverage ratchets, issue triggers, PR QA, change-triggered coverage, release gates, and coverage swarms. Treat generated dependency folders, coverage reports, build outputs, and .local-operator as non-product artifacts.",
+      "author": "Tellson's platform team"
+    },
+    {
+      "content": "The most important narrative is how coverage work moves from repo comprehension to encoded test conventions, service-specific tests, pull-request evidence, and CI ratchet automation. Documentation should call out where Java, TypeScript, and Python services differ in test setup.",
+      "author": "Tellson's platform team"
+    }
+  ],
+  "pages": [
+    {
+      "title": "Architecture Overview",
+      "purpose": "Document the Tellson's Bank monorepo structure, shared models, service ownership, and cross-service dependency graph.",
+      "parent": null
+    },
+    {
+      "title": "Compliance-Critical Paths",
+      "purpose": "Document transaction processing, authentication, PII handling, and audit logging paths, including the primary and supporting services for each path.",
+      "parent": "Architecture Overview"
+    },
+    {
+      "title": "Service Families",
+      "purpose": "Document the Java, TypeScript, and Python services, their test infrastructure, and how each service contributes to a compliance path.",
+      "parent": "Architecture Overview"
+    },
+    {
+      "title": "Coverage Baseline",
+      "purpose": "Document baseline coverage posture, targeted branch-coverage gaps, and why repo-level coverage is not enough for compliance-path work.",
+      "parent": "Compliance-Critical Paths"
+    },
+    {
+      "title": "Audit Logger Bootstrap",
+      "purpose": "Document audit-logger's missing test infrastructure and the expected first remediation work: pytest, coverage, mocks, and CI without production-code changes.",
+      "parent": "Coverage Baseline"
+    },
+    {
+      "title": "CI Coverage Ratchet",
+      "purpose": "Document the coverage gate, GitHub Actions workflows, Devin API trigger scripts, PR/commit coverage triggers, QA review triggers, coverage swarm dispatch, and how below-threshold paths open remediation sessions.",
+      "parent": "Coverage Baseline"
+    },
+    {
+      "title": "Agent Testing Conventions",
+      "purpose": "Document AGENTS.md and .agents/skills guidance: synthetic fixtures only, no production-code changes for test PRs, and targeted coverage evidence requirements.",
+      "parent": "Coverage Baseline"
+    }
+  ]
+}

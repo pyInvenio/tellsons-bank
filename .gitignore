@@ -1,0 +1,15 @@
+.DS_Store
+build/
+.gradle/
+.gradle-home/
+node_modules/
+coverage/
+htmlcov/
+.pytest_cache/
+__pycache__/
+*.pyc
+.env
+.env.local
+.local-operator/
+.idea/
+.vscode/

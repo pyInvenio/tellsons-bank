@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "TransactionEvent",
+  "type": "object",
+  "required": [
+    "eventId",
+    "accountId",
+    "amount",
+    "currency",
+    "occurredAt"
+  ],
+  "properties": {
+    "eventId": {
+      "type": "string"
+    },
+    "accountId": {
+      "type": "string"
+    },
+    "amount": {
+      "type": "string",
+      "pattern": "^-?\\d+\\.\\d{2}$"
+    },
+    "currency": {
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 3
+    },
+    "occurredAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}
