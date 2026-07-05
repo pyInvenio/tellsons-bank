@@ -1,0 +1,15 @@
+{
+  "_comment": "Synthetic-only JWT claim fixtures for auth-gateway tests. No real keys, issuers, or customer data. Signing keys are generated at test time; see tests/helpers/jwt.ts.",
+  "subjects": {
+    "standard": "cust_test_001",
+    "demo": "cust_demo_042"
+  },
+  "scopeVariants": {
+    "spaceDelimited": "sessions:read accounts:read",
+    "array": ["sessions:read", "accounts:read"],
+    "nonStringArray": [1, 2],
+    "empty": ""
+  },
+  "absoluteFarFutureExp": 4102444800,
+  "notes": "absoluteFarFutureExp is 2100-01-01T00:00:00Z so jwt.verify never treats fixtures as wall-clock expired; the verifier's own expiry branch is exercised via the injected clock."
+}
