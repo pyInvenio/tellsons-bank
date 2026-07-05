@@ -5,6 +5,8 @@ on:
     paths:
       - 'services/customer-profile/**'
       - 'services/risk-scoring/**'
+      - 'services/audit-logger/**'
+      - '.github/scripts/coverage_gate.py'
   push:
     branches: [main]
 
@@ -25,3 +27,33 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest discover -s tests -p '*_test.py'
+
+  audit-logger-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/audit-logger
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run pytest with branch coverage
+        run: python -m coverage run -m pytest
+      - name: Report branch coverage
+        run: python -m coverage report -m
+      - name: Write coverage JSON report
+        run: python -m coverage json -o coverage.json
+      - name: Enforce audit branch-coverage threshold
+        working-directory: ${{ github.workspace }}
+        run: python .github/scripts/coverage_gate.py --paths audit --min 80
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-logger-coverage
+          path: |
+            services/audit-logger/coverage.json
+            services/audit-logger/coverage_html

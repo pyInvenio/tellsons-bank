@@ -1,0 +1,55 @@
+{
+  "ssn_cases": [
+    {
+      "name": "single_ssn",
+      "input": "review flagged for 000-00-0000 today",
+      "expected": "review flagged for ***-**-**** today"
+    },
+    {
+      "name": "multiple_ssns",
+      "input": "compare 000-00-0000 with 123-45-6789 now",
+      "expected": "compare ***-**-**** with ***-**-**** now"
+    }
+  ],
+  "account_cases": [
+    {
+      "name": "account_with_punctuation",
+      "input": "transfer denied for (acct_test_0001).",
+      "expected": "transfer denied for (acct_***)."
+    },
+    {
+      "name": "demo_account",
+      "input": "closed acct_demo_009988 per request",
+      "expected": "closed acct_*** per request"
+    }
+  ],
+  "combined_cases": [
+    {
+      "name": "ssn_and_account",
+      "input": "cust 000-00-0000 owns acct_test_777001",
+      "expected": "cust ***-**-**** owns acct_***"
+    }
+  ],
+  "near_miss_cases": [
+    {
+      "name": "short_ssn",
+      "input": "code 00-00-0000 is not an ssn",
+      "expected": "code 00-00-0000 is not an ssn"
+    },
+    {
+      "name": "short_account_suffix",
+      "input": "ref acct_12 is too short",
+      "expected": "ref acct_12 is too short"
+    },
+    {
+      "name": "no_pii",
+      "input": "login succeeded for cust_test_001",
+      "expected": "login succeeded for cust_test_001"
+    },
+    {
+      "name": "empty",
+      "input": "",
+      "expected": ""
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+[project]
+name = "audit-logger"
+version = "0.0.0"
+description = "Tellson's Bank tamper-evident audit logging service"
+requires-python = ">=3.12"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["audit_logger"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["*_test.py"]
+addopts = "-ra"
+
+[tool.coverage.run]
+branch = true
+source = ["audit_logger"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.coverage.json]
+output = "coverage.json"
