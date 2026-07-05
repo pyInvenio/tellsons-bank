@@ -121,6 +121,7 @@ def pytest_branch_percent(path: Path) -> float | None:
     return (float(covered) / float(total)) * 100 if total else 100.0
 
 
+
 def coverage_for(target: CoverageTarget) -> float | None:
     if target.report_type == "jacoco":
         return jacoco_branch_percent(target.report)

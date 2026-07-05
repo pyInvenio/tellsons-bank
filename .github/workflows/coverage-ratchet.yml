@@ -39,6 +39,19 @@ jobs:
         run: |
           npm install
           npm test
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Generate audit coverage report
+        continue-on-error: true
+        working-directory: services/audit-logger
+        run: |
+          pip install pytest pytest-cov
+          python -m pytest tests/ \
+            --cov=audit_logger \
+            --cov-branch \
+            --cov-report=json:coverage.json \
+            --tb=short
       - name: Check compliance-path coverage
         id: gate
         continue-on-error: true
