@@ -52,8 +52,17 @@ jobs:
             coverage-ratchet-evidence.md
             coverage-ratchet-evidence.json
           if-no-files-found: warn
-      - name: Open Devin session on gap
+      - name: Check for existing remediation PR
         if: steps.gate.outputs.below_threshold == 'true'
+        id: existing
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: >
+          python .github/scripts/find_open_remediation.py
+          --service "${{ steps.gate.outputs.service }}"
+          --path "${{ steps.gate.outputs.path_family }}"
+      - name: Open Devin session on gap
+        if: steps.gate.outputs.below_threshold == 'true' && steps.existing.outputs.exists != 'true'
         env:
           DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
           DEVIN_ORG_ID: ${{ secrets.DEVIN_ORG_ID }}
@@ -74,3 +83,15 @@ jobs:
           --tag tellsons-occ
           --max-acu-limit "${{ inputs.max_acu_limit || '10' }}"
           --comment-on-pr
+      - name: Reuse existing remediation PR
+        if: steps.gate.outputs.below_threshold == 'true' && steps.existing.outputs.exists == 'true'
+        run: |
+          {
+            echo "## Existing Remediation PR"
+            echo
+            echo "The ratchet did not open a new Devin session because an open remediation PR already exists."
+            echo
+            echo "- Service: \`${{ steps.gate.outputs.service }}\`"
+            echo "- Path: \`${{ steps.gate.outputs.path_family }}\`"
+            echo "- PR: ${{ steps.existing.outputs.url }}"
+          } >> "$GITHUB_STEP_SUMMARY"
