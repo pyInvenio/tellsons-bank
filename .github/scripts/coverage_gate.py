@@ -32,6 +32,24 @@ class CoverageGap:
         return "undefined" if self.coverage is None else f"{self.coverage:.2f}"
 
 
+@dataclass(frozen=True)
+class CoverageMeasurement:
+    target: CoverageTarget
+    coverage: float | None
+    minimum: float
+
+    @property
+    def status(self) -> str:
+        if self.coverage is None:
+            return "missing report"
+        if self.coverage < self.minimum:
+            return "below threshold"
+        return "pass"
+
+    def output_coverage(self) -> str:
+        return "undefined" if self.coverage is None else f"{self.coverage:.2f}"
+
+
 TARGETS = {
     "transaction": CoverageTarget(
         "transaction",
@@ -55,7 +73,7 @@ TARGETS = {
         "audit",
         "audit-logger",
         Path("services/audit-logger/coverage.json"),
-        "coveragepy",
+        "pytest",
     ),
 }
 
@@ -91,7 +109,7 @@ def jest_branch_percent(path: Path) -> float | None:
     return float(pct) if pct is not None else None
 
 
-def coveragepy_branch_percent(path: Path) -> float | None:
+def pytest_branch_percent(path: Path) -> float | None:
     if not path.exists():
         return None
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -100,9 +118,7 @@ def coveragepy_branch_percent(path: Path) -> float | None:
     total = totals.get("num_branches")
     if covered is None or total is None:
         return None
-    if total == 0:
-        return 100.0
-    return (covered / total) * 100
+    return (float(covered) / float(total)) * 100 if total else 100.0
 
 
 def coverage_for(target: CoverageTarget) -> float | None:
@@ -110,9 +126,97 @@ def coverage_for(target: CoverageTarget) -> float | None:
         return jacoco_branch_percent(target.report)
     if target.report_type == "jest":
         return jest_branch_percent(target.report)
-    if target.report_type == "coveragepy":
-        return coveragepy_branch_percent(target.report)
+    if target.report_type == "pytest":
+        return pytest_branch_percent(target.report)
     return None
+
+
+def measurement_dict(measurement: CoverageMeasurement) -> dict[str, object]:
+    return {
+        "path": measurement.target.path_family,
+        "service": measurement.target.service,
+        "coverage": measurement.output_coverage(),
+        "minimum": measurement.minimum,
+        "status": measurement.status,
+        "report": str(measurement.target.report),
+        "report_type": measurement.target.report_type,
+    }
+
+
+def write_evidence(
+    measurements: list[CoverageMeasurement],
+    gaps: list[CoverageGap],
+    selected: CoverageGap | None,
+) -> None:
+    evidence = {
+        "threshold": measurements[0].minimum if measurements else None,
+        "below_threshold": bool(gaps),
+        "selected_gap": None
+        if selected is None
+        else {
+            "path": selected.target.path_family,
+            "service": selected.target.service,
+            "coverage": selected.output_coverage(),
+            "minimum": selected.minimum,
+            "report": str(selected.target.report),
+        },
+        "measurements": [measurement_dict(item) for item in measurements],
+    }
+    Path("coverage-ratchet-evidence.json").write_text(
+        json.dumps(evidence, indent=2) + "\n", encoding="utf-8"
+    )
+
+    lines = [
+        "# Compliance Coverage Ratchet Evidence",
+        "",
+        "This gate measures branch coverage for the four OCC demo path families and "
+        "opens a Devin session for the highest-priority gap that needs remediation.",
+        "",
+        f"- Threshold: {measurements[0].minimum:.2f}% branch coverage" if measurements else "- Threshold: unknown",
+        f"- Result: {'below threshold' if gaps else 'all paths pass'}",
+    ]
+    if selected:
+        lines.extend(
+            [
+                f"- Selected remediation: `{selected.target.service}` / `{selected.target.path_family}`",
+                f"- Selected coverage: `{selected.output_coverage()}`",
+                f"- Selected report: `{selected.target.report}`",
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "| Path | Service | Branch Coverage | Minimum | Status | Evidence Report |",
+            "|---|---|---:|---:|---|---|",
+        ]
+    )
+    for item in measurements:
+        lines.append(
+            "| "
+            f"{item.target.path_family} | "
+            f"{item.target.service} | "
+            f"{item.output_coverage()} | "
+            f"{item.minimum:.2f} | "
+            f"{item.status} | "
+            f"`{item.target.report}` |"
+        )
+    lines.extend(
+        [
+            "",
+            "Devin is opened only when a named path is below the threshold or lacks a "
+            "coverage report. The session prompt is scoped to the selected service/path "
+            "and requires synthetic fixtures plus no production-code changes.",
+            "",
+        ]
+    )
+    markdown = "\n".join(lines)
+    Path("coverage-ratchet-evidence.md").write_text(markdown, encoding="utf-8")
+
+    summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_path:
+        with open(summary_path, "a", encoding="utf-8") as handle:
+            handle.write(markdown)
+            handle.write("\n")
 
 
 def main() -> int:
@@ -122,10 +226,12 @@ def main() -> int:
     args = parser.parse_args()
 
     requested = [path.strip() for path in args.paths.split(",") if path.strip()]
+    measurements: list[CoverageMeasurement] = []
     gaps: list[CoverageGap] = []
     for path_family in requested:
         target = TARGETS[path_family]
         pct = coverage_for(target)
+        measurements.append(CoverageMeasurement(target, pct, args.minimum))
         if pct is None or pct < args.minimum:
             gaps.append(CoverageGap(target, pct, args.minimum))
             print(
@@ -135,6 +241,7 @@ def main() -> int:
 
     if gaps:
         selected = sorted(gaps, key=lambda gap: gap.severity_key)[0]
+        write_evidence(measurements, gaps, selected)
         set_output("below_threshold", "true")
         set_output("service", selected.target.service)
         set_output("path_family", selected.target.path_family)
@@ -151,6 +258,8 @@ def main() -> int:
                 for gap in gaps
             ]),
         )
+        set_output("evidence_markdown", "coverage-ratchet-evidence.md")
+        set_output("evidence_json", "coverage-ratchet-evidence.json")
         print(
             "selected_gap="
             f"{selected.target.path_family}/{selected.target.service}/"
@@ -158,8 +267,11 @@ def main() -> int:
         )
         return 1
 
+    write_evidence(measurements, gaps, None)
     set_output("below_threshold", "false")
     set_output("gaps", "[]")
+    set_output("evidence_markdown", "coverage-ratchet-evidence.md")
+    set_output("evidence_json", "coverage-ratchet-evidence.json")
     print("All compliance paths meet threshold")
     return 0
 

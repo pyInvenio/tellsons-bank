@@ -53,6 +53,15 @@ jobs:
         id: gate
         continue-on-error: true
         run: python .github/scripts/coverage_gate.py --paths transaction,auth,pii,audit --min 80
+      - name: Upload ratchet evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-ratchet-evidence
+          path: |
+            coverage-ratchet-evidence.md
+            coverage-ratchet-evidence.json
+          if-no-files-found: warn
       - name: Open Devin session on gap
         if: steps.gate.outputs.below_threshold == 'true'
         env:
@@ -64,6 +73,7 @@ jobs:
           DEVIN_KNOWLEDGE_ID_TELLSONS_DEMO_CONTEXT: ${{ secrets.DEVIN_KNOWLEDGE_ID_TELLSONS_DEMO_CONTEXT }}
           DEVIN_KNOWLEDGE_ID_TELLSONS_COMPLIANCE_PATHS: ${{ secrets.DEVIN_KNOWLEDGE_ID_TELLSONS_COMPLIANCE_PATHS }}
           DEVIN_KNOWLEDGE_ID_TELLSONS_DEVIN_API_NOTES: ${{ secrets.DEVIN_KNOWLEDGE_ID_TELLSONS_DEVIN_API_NOTES }}
+          DEVIN_TRIGGER_SUMMARY_FILE: ${{ steps.gate.outputs.evidence_markdown }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: >
           python .github/scripts/open_devin_session.py
