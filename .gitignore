@@ -5,6 +5,8 @@ build/
 node_modules/
 coverage/
 coverage.json
+coverage-ratchet-evidence.json
+coverage-ratchet-evidence.md
 .coverage
 htmlcov/
 .pytest_cache/
