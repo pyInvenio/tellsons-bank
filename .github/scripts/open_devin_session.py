@@ -24,13 +24,15 @@ def post_github_comment(session: dict) -> None:
     if not issue_number:
         return
 
-    body = {
-        "body": (
-            "Opened a Devin session for this coverage workflow:\n\n"
-            f"- Session: {session.get('url', session.get('session_id', 'unknown'))}\n"
-            f"- Tags: {', '.join(session.get('tags', []))}"
-        )
-    }
+    comment = (
+        "Opened a Devin session for this coverage workflow:\n\n"
+        f"- Session: {session.get('url', session.get('session_id', 'unknown'))}\n"
+        f"- Tags: {', '.join(session.get('tags', []))}"
+    )
+    trigger_summary = read_trigger_summary()
+    if trigger_summary:
+        comment = f"{comment}\n\n{trigger_summary}"
+    body = {"body": comment}
     request = urllib.request.Request(
         f"https://api.github.com/repos/{repository}/issues/{issue_number}/comments",
         data=json.dumps(body).encode("utf-8"),
@@ -44,6 +46,22 @@ def post_github_comment(session: dict) -> None:
     )
     with urllib.request.urlopen(request, timeout=30):
         pass
+
+
+def read_trigger_summary() -> str:
+    summary_file = os.environ.get("DEVIN_TRIGGER_SUMMARY_FILE")
+    if not summary_file:
+        return ""
+    path = Path(summary_file)
+    if not path.exists():
+        return ""
+    contents = path.read_text(encoding="utf-8").strip()
+    if not contents:
+        return ""
+    max_chars = 12000
+    if len(contents) > max_chars:
+        return contents[:max_chars] + "\n\n_Trimmed; see the workflow artifact for full evidence._"
+    return contents
 
 
 def append_step_summary(session: dict) -> None:
