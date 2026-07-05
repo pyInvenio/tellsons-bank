@@ -1,0 +1,64 @@
+name: TypeScript services
+
+on:
+  pull_request:
+    paths:
+      - 'services/auth-gateway/**'
+      - 'services/notification-dispatch/**'
+      - 'services/statements-api/**'
+      - 'services/loan-origination/**'
+  push:
+    branches: [main]
+
+jobs:
+  auth-gateway:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/auth-gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm test
+
+  notification-dispatch:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/notification-dispatch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm test
+
+  statements-api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/statements-api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm test
+
+  loan-origination:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/loan-origination
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install
+      - run: npm test

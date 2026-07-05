@@ -1,0 +1,74 @@
+name: Devin release coverage gate
+
+on:
+  release:
+    types: [published, prereleased]
+  workflow_dispatch:
+    inputs:
+      release_name:
+        description: Release or dry-run name
+        required: true
+        default: occ-readiness-dry-run
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.6.1'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Generate release coverage evidence
+        continue-on-error: true
+        run: |
+          gradle :services:payments-core:test :services:pii-vault:test
+          (cd services/auth-gateway && npm install && npm test)
+      - name: Check compliance paths
+        id: gate
+        continue-on-error: true
+        run: python .github/scripts/coverage_gate.py --paths transaction,auth,pii,audit --min 80
+      - name: Write release prompt
+        if: steps.gate.outputs.below_threshold == 'true'
+        id: prompt
+        run: |
+          prompt_file="${RUNNER_TEMP}/devin_release_prompt.txt"
+          cat > "$prompt_file" <<PROMPT
+          !compliance-tests ${{ steps.gate.outputs.service }} ${{ steps.gate.outputs.path_family }}
+
+          Release gate detected a Tellson's Bank compliance coverage gap.
+
+          Release: ${{ github.event.release.name || inputs.release_name }}
+          Selected gap: ${{ steps.gate.outputs.path_family }} / ${{ steps.gate.outputs.service }}
+          All gaps: ${{ steps.gate.outputs.gaps }}
+
+          Use synthetic fixtures only. Add tests, fixtures, mocks, CI wiring, and evidence notes.
+          Do not change production code. If product behavior appears defective, write a finding
+          with reproduction steps and stop before remediation.
+          PROMPT
+          echo "prompt_file=$prompt_file" >> "$GITHUB_OUTPUT"
+      - name: Open Devin release-gate session
+        if: steps.gate.outputs.below_threshold == 'true'
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_ORG_ID: ${{ secrets.DEVIN_ORG_ID }}
+          DEVIN_PLAYBOOK_ID: ${{ secrets.DEVIN_PLAYBOOK_ID }}
+          DEVIN_KNOWLEDGE_IDS: ${{ secrets.DEVIN_KNOWLEDGE_IDS }}
+        run: >
+          python .github/scripts/open_devin_session.py
+          --service "${{ steps.gate.outputs.service }}"
+          --path "${{ steps.gate.outputs.path_family }}"
+          --title "Release gate: ${{ steps.gate.outputs.path_family }} coverage for ${{ steps.gate.outputs.service }}"
+          --prompt-file "${{ steps.prompt.outputs.prompt_file }}"
+          --tag release-gate
+          --tag tellsons-occ
+          --tag "${{ steps.gate.outputs.path_family }}"

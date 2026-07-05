@@ -1,0 +1,27 @@
+name: Python support services
+
+on:
+  pull_request:
+    paths:
+      - 'services/customer-profile/**'
+      - 'services/risk-scoring/**'
+  push:
+    branches: [main]
+
+jobs:
+  python-support-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - customer-profile
+          - risk-scoring
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -p '*_test.py'

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AuditRecord",
+  "type": "object",
+  "required": [
+    "sequence",
+    "hash",
+    "previousHash",
+    "message"
+  ],
+  "properties": {
+    "sequence": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "hash": {
+      "type": "string"
+    },
+    "previousHash": {
+      "type": "string"
+    },
+    "message": {
+      "type": "string"
+    },
+    "classification": {
+      "enum": [
+        "PUBLIC",
+        "INTERNAL",
+        "PII_REDACTED"
+      ]
+    }
+  }
+}

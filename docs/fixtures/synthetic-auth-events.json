@@ -1,0 +1,12 @@
+[
+  {
+    "eventId": "evt_auth_001",
+    "subject": "user_test",
+    "result": "DENY"
+  },
+  {
+    "eventId": "evt_auth_002",
+    "subject": "user_test",
+    "result": "ALLOW"
+  }
+]

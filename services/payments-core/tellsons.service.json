@@ -1,0 +1,10 @@
+{
+  "service": "payments-core",
+  "language": "java",
+  "compliancePath": "transaction",
+  "syntheticOnly": true,
+  "coverageTarget": {
+    "metric": "branch",
+    "targetPercent": 80
+  }
+}
