@@ -9,6 +9,10 @@ on:
         description: Release or dry-run name
         required: true
         default: occ-readiness-dry-run
+      max_acu_limit:
+        description: ACU cap for a Devin session opened by this run
+        required: true
+        default: '2'
 
 jobs:
   release-gate:
@@ -72,3 +76,4 @@ jobs:
           --tag release-gate
           --tag tellsons-occ
           --tag "${{ steps.gate.outputs.path_family }}"
+          --max-acu-limit "${{ inputs.max_acu_limit || '10' }}"

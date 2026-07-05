@@ -17,6 +17,10 @@ on:
         type: choice
         options: [transaction, auth, pii, audit]
         default: audit
+      max_acu_limit:
+        description: ACU cap for the Devin session
+        required: true
+        default: '2'
 
 jobs:
   open-qa-session:
@@ -65,4 +69,5 @@ jobs:
           --tag qa
           --tag tellsons-occ
           --tag "${{ steps.qa.outputs.path_family || steps.manual.outputs.path_family }}"
+          --max-acu-limit "${{ inputs.max_acu_limit || '10' }}"
           --comment-on-github

@@ -5,6 +5,11 @@ on:
   schedule:
     - cron: '30 6 * * *'
   workflow_dispatch:
+    inputs:
+      max_acu_limit:
+        description: ACU cap for a Devin session opened by this run
+        required: true
+        default: '2'
 
 jobs:
   coverage-gate:
@@ -53,4 +58,5 @@ jobs:
           --title "Ratchet ${{ steps.gate.outputs.path_family }} coverage for ${{ steps.gate.outputs.service }}"
           --tag ratchet
           --tag tellsons-occ
+          --max-acu-limit "${{ inputs.max_acu_limit || '10' }}"
           --comment-on-pr

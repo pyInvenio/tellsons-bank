@@ -15,6 +15,10 @@ on:
         type: choice
         options: [transaction, auth, pii, audit]
         default: audit
+      max_acu_limit:
+        description: ACU cap for the Devin session
+        required: true
+        default: '2'
 
 jobs:
   open-devin-session:
@@ -58,6 +62,7 @@ jobs:
           --tag issue-trigger
           --tag tellsons-occ
           --tag "${{ steps.issue.outputs.path_family }}"
+          --max-acu-limit "10"
           --comment-on-github
       - name: Open Devin session manually
         if: github.event_name == 'workflow_dispatch'
@@ -75,3 +80,4 @@ jobs:
           --tag manual-trigger
           --tag tellsons-occ
           --tag "${{ inputs.path }}"
+          --max-acu-limit "${{ inputs.max_acu_limit }}"
