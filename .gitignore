@@ -5,6 +5,9 @@ build/
 node_modules/
 coverage/
 htmlcov/
+.coverage
+coverage.json
+coverage.xml
 .pytest_cache/
 __pycache__/
 *.pyc
