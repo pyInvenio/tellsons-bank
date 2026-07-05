@@ -1,0 +1,20 @@
+{
+  "_note": "Synthetic-only auth fixtures for auth-gateway compliance tests. No real users, keys, or tokens. Keys are generated at test runtime.",
+  "subjects": {
+    "primary": "cust_test_0001",
+    "secondary": "cust_test_0002",
+    "demo": "cust_demo_0001",
+    "blank": ""
+  },
+  "scopes": {
+    "array": ["accounts:read", "statements:read"],
+    "spaceDelimited": "accounts:read statements:read",
+    "single": "accounts:read"
+  },
+  "emailDomain": "example.test",
+  "sourceIp": "203.0.113.7",
+  "clock": {
+    "fixedEpochSeconds": 1700000000,
+    "defaultSkewSeconds": 30
+  }
+}
