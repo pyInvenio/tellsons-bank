@@ -1,0 +1,30 @@
+name: Audit logger tests
+
+on:
+  pull_request:
+    paths:
+      - 'services/audit-logger/**'
+  push:
+    branches: [main]
+
+jobs:
+  audit-logger-tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/audit-logger
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependencies
+        run: pip install pytest pytest-cov
+      - name: Run tests with coverage
+        run: pytest --tb=short
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-logger-coverage
+          path: services/audit-logger/coverage_html/
