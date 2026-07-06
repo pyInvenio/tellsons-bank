@@ -1,0 +1,14 @@
+[
+  {
+    "caseId": "case_test_0001",
+    "transactionId": "txn_test_9001",
+    "reason": "unauthorized charge on acct_test_source",
+    "expectedStatus": "OPEN"
+  },
+  {
+    "caseId": "case_test_0002",
+    "transactionId": "txn_test_9002",
+    "reason": "duplicate debit for txn_test_9001",
+    "expectedStatus": "OPEN"
+  }
+]
