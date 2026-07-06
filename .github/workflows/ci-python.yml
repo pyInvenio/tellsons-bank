@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'services/customer-profile/**'
+      - 'services/dispute-resolution/**'
       - 'services/risk-scoring/**'
   push:
     branches: [main]
@@ -15,6 +16,7 @@ jobs:
       matrix:
         service:
           - customer-profile
+          - dispute-resolution
           - risk-scoring
     defaults:
       run:
@@ -24,4 +26,12 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: python -m unittest discover -s tests -p '*_test.py'
+      - name: Install test dependencies
+        if: matrix.service == 'dispute-resolution'
+        run: pip install pytest pytest-cov
+      - name: Run tests (pytest)
+        if: matrix.service == 'dispute-resolution'
+        run: python -m pytest tests/ --cov=dispute_resolution --cov-branch --cov-report=term-missing
+      - name: Run tests (unittest)
+        if: matrix.service != 'dispute-resolution'
+        run: python -m unittest discover -s tests -p '*_test.py'
