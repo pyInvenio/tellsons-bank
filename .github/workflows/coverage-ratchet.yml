@@ -20,6 +20,8 @@ jobs:
       issues: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -95,3 +97,9 @@ jobs:
             echo "- Path: \`${{ steps.gate.outputs.path_family }}\`"
             echo "- PR: ${{ steps.existing.outputs.url }}"
           } >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail changed production paths below coverage threshold
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python .github/scripts/changed_path_coverage_gate.py --min 80
