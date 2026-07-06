@@ -41,6 +41,12 @@ jobs:
         run: |
           npm install
           npm test
+      - name: Generate audit coverage report
+        continue-on-error: true
+        working-directory: services/audit-logger
+        run: |
+          pip install pytest coverage
+          coverage run -m pytest && coverage json
       - name: Check compliance-path coverage
         id: gate
         continue-on-error: true
