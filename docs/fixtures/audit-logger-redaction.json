@@ -1,0 +1,18 @@
+[
+  {
+    "message": "cust_test_0001 used 000-00-0000 for audit verification",
+    "expected": "cust_test_0001 used ***-**-**** for audit verification"
+  },
+  {
+    "message": "acct_test_0001 was linked to the case",
+    "expected": "acct_*** was linked to the case"
+  },
+  {
+    "message": "cust_test_0001 and acct_test_0001 referenced 000-00-0000 together",
+    "expected": "cust_test_0001 and acct_*** referenced ***-**-**** together"
+  },
+  {
+    "message": "cust_test_0001 completed a synthetic audit step",
+    "expected": "cust_test_0001 completed a synthetic audit step"
+  }
+]
